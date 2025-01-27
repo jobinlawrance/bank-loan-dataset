@@ -197,7 +197,7 @@ func main() {
 		Auth: clickhouse.Auth{
 			Database: "default",
 			Username: "default",
-			Password: "",
+			Password: "password",
 		},
 	})
 	if err != nil {
