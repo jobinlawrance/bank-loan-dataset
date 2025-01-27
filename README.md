@@ -39,7 +39,9 @@ Additionaly I converted the csv to json for further processing (but can be avoid
 
 ## Ingesting the data into Clickhouse
 
-First we start the clickhouse docker instance using `docker compose up -d`
+- Create a .env file and add `PASSWORD=whatever_password_you_want"
+- Make sure the double SHA of the above password is added in the users.xml config before proceeding.
+- start the clickhouse docker instance using `docker compose up -d`
 
 Then running `go run insert-into-ch.go` will first analyze the json file, figure out the column and data type and creates a table called `loan_data`
 
