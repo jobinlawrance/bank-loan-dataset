@@ -19,5 +19,4 @@
         </local_directory>
     </user_directories>
     <mysql_port>9004</mysql_port>
-    <postgresql_port>9005</postgresql_port>
 </clickhouse>
