@@ -4,7 +4,7 @@
 
 ```bash
 docker compose up -d
-sudo apt install python3-csvkit (brew install csvkit)
+sudo apt install csvkit (brew install csvkit)
 go run csv-cleaner.go
 csvjson output.csv > output.json
 go run insert-into-ch.go
