@@ -28,7 +28,7 @@
     <quotas>
         <default>
             <interval>
-                <duration>3600</duration>
+                <duration>36000</duration>
                 <queries>1000</queries>
                 <errors>100</errors>
                 <result_rows>1000000</result_rows>
