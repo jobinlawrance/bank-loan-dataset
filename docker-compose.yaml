@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    user: "101:101"
+    container_name: clickhouse
+    hostname: clickhouse
+    volumes:
+      - ${PWD}/fs/volumes/clickhouse/etc/clickhouse-server/config.d/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ${PWD}/fs/volumes/clickhouse/etc/clickhouse-server/users.d/users.xml:/etc/clickhouse-server/users.d/users.xml
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
+  # grafana:
+  #   build: 
+  #     context: ${PWD}/docker_files/
+  #     dockerfile: grafana.Dockerfile
+  #   container_name: grafana
+  #   hostname: grafana
+  #   volumes:
+  #     - ${PWD}/fs/volumes/grafana/etc/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+  #   ports:
+  #     - "127.0.0.1:3000:3000"
+  #   depends_on:
+  #     - clickhouse
+
+  metabase:
+    image: jobinlawrance/metabase-clickhouse:v0.0.2
+    container_name: metabase
+    hostname: metabase
+    volumes:
+      - /dev/urandom:/dev/random:ro
+    ports:
+      - 3000:3000
+    # environment:
+    #   MB_DB_TYPE: postgres
+    #   MB_DB_DBNAME: metabaseappdb
+    #   MB_DB_PORT: 5432
+    #   MB_DB_USER: metabase
+    #   MB_DB_PASS: mysecretpassword
+    #   MB_DB_HOST: postgres
+    # networks:
+    #   - metanet1
+    healthcheck:
+      test: curl --fail -I http://localhost:3000/api/health || exit 1
+      interval: 15s
+      timeout: 5s
+      retries: 5
