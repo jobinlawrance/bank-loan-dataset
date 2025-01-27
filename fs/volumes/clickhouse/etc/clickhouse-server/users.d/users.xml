@@ -7,6 +7,12 @@
             <load_balancing>in_order</load_balancing>
             <log_queries>1</log_queries>
         </default>
+        <mysql_user>
+            <prefer_column_name_to_alias>1</prefer_column_name_to_alias>
+            <mysql_map_string_to_text_in_show_columns>1</mysql_map_string_to_text_in_show_columns>
+            <mysql_map_fixed_string_to_text_in_show_columns>1</mysql_map_fixed_string_to_text_in_show_columns>
+            <allow_plaintext_password>1</allow_plaintext_password>
+        </mysql_user>
     </profiles>
     <users>
         <default>
@@ -16,7 +22,6 @@
                 <ip>::/0</ip>
             </networks>
             <quota>default</quota>
-            <access_management>1</access_management>
             <named_collection_control>1</named_collection_control>
             <show_named_collections>1</show_named_collections>
             <show_named_collections_secrets>1</show_named_collections_secrets>
@@ -26,23 +31,19 @@
             <networks>
                 <ip>::/0</ip>
             </networks>
-            <profile>default</profile>
+            <profile>mysql_user</profile>
             <quota>default</quota>
-            <allow_plaintext_password>1</allow_plaintext_password>
-            <prefer_column_name_to_alias>1</prefer_column_name_to_alias>
-            <mysql_map_string_to_text_in_show_columns>1</mysql_map_string_to_text_in_show_columns>
-            <mysql_map_fixed_string_to_text_in_show_columns>1</mysql_map_fixed_string_to_text_in_show_columns>
         </mysql_user>
     </users>
     <quotas>
         <default>
             <interval>
                 <duration>3600</duration>
-                <queries>0</queries>
-                <errors>0</errors>
-                <result_rows>0</result_rows>
-                <read_rows>0</read_rows>
-                <execution_time>0</execution_time>
+                <queries>1000</queries>
+                <errors>100</errors>
+                <result_rows>1000000</result_rows>
+                <read_rows>1000000</read_rows>
+                <execution_time>3600</execution_time>
             </interval>
         </default>
     </quotas>
