@@ -1,3 +1,4 @@
 output.csv
 output.json
 clickhouse-server.err.log
+.env

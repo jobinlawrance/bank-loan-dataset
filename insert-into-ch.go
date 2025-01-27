@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/joho/godotenv"
 )
 
 // Column represents column metadata
@@ -192,12 +194,16 @@ func convertToFloat(val interface{}) float64 {
 
 func main() {
 	// ClickHouse connection parameters
+	er := godotenv.Load(".env")
+	if er != nil {
+		log.Fatal("Error loading .env file:", er)
+	}
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{"localhost:9000"},
 		Auth: clickhouse.Auth{
 			Database: "default",
-			Username: "default",
-			Password: "password",
+			Username: "mysql_user",
+			Password: os.Getenv("PASSWORD"),
 		},
 	})
 	if err != nil {
