@@ -11,6 +11,7 @@ services:
     ports:
       - "127.0.0.1:8123:8123"
       - "127.0.0.1:9000:9000"
+      - "9004:9004"
   # grafana:
   #   build:
   #     context: ${PWD}/docker_files/
