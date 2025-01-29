@@ -23,8 +23,12 @@ ch_client = Client(**CLICKHOUSE_CONFIG)
 
 def create_tables():
     # Drop existing tables if needed (uncomment to use)
-    # ch_client.execute('DROP TABLE IF EXISTS Fact_Sales')
-    # ch_client.execute('DROP TABLE IF EXISTS Dim_Time')
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Customer')
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Product')
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Region')
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Sales_Channel')
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Time')
+    ch_client.execute('DROP TABLE IF EXISTS Fact_Sales')
     # ... repeat for other tables ...
 
     # Create dimension tables
@@ -198,7 +202,7 @@ def generate_dimension_data():
     ch_client.execute('INSERT INTO Dim_Product VALUES', dim_products)
     ch_client.execute('INSERT INTO Dim_Customer VALUES', dim_customers)
 
-def generate_fact_sales(num_records=500000, batch_size=50000):
+def generate_fact_sales(num_records=500000, batch_size=10000):
     # Get existing keys
     date_ids = [row[0] for row in ch_client.execute('SELECT date_id FROM Dim_Time')]
     product_ids = [row[0] for row in ch_client.execute('SELECT product_id FROM Dim_Product')]
