@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
     Dim_Time {
         Int32 date_id
@@ -91,3 +92,4 @@ erDiagram
     Fact_Sales ||--o{ Dim_Sales_Channel: "channel_id"
     Dim_Customer ||--o{ Dim_Region: "region_id"
     Dim_Loan ||--o{ Dim_Customer: "customer_id"
+```
