@@ -5,11 +5,10 @@ from clickhouse_driver import Client
 from dotenv import load_dotenv
 import random
 
-load_dotenv()  # Load environment variables from .env
+load_dotenv()
 
 fake = Faker()
 
-# ClickHouse connection configuration
 CLICKHOUSE_CONFIG = {
     'host': 'localhost',
     'port': 9000,
@@ -18,26 +17,27 @@ CLICKHOUSE_CONFIG = {
     'database': 'default'
 }
 
-# Initialize ClickHouse client
 ch_client = Client(**CLICKHOUSE_CONFIG)
 
 def create_tables():
-    # Drop existing tables if needed (uncomment to use)
+    print("Dropping existing tables if they exist...")
     ch_client.execute('DROP TABLE IF EXISTS Dim_Customer')
     ch_client.execute('DROP TABLE IF EXISTS Dim_Product')
     ch_client.execute('DROP TABLE IF EXISTS Dim_Region')
     ch_client.execute('DROP TABLE IF EXISTS Dim_Sales_Channel')
     ch_client.execute('DROP TABLE IF EXISTS Dim_Time')
     ch_client.execute('DROP TABLE IF EXISTS Fact_Sales')
-    # ... repeat for other tables ...
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Loan')
+    print("Existing tables dropped.")
 
-    # Create dimension tables
+    # Modified to use MySQL-compatible types
+    print("Creating new tables...")
     ch_client.execute('''
         CREATE TABLE IF NOT EXISTS Dim_Time (
             date_id         Int32,
             date            Date,
             month           Int8,
-            year            Int16
+            year           Int16
         ) ENGINE = MergeTree()
         ORDER BY date_id
     ''')
@@ -47,7 +47,7 @@ def create_tables():
             product_id      Int32,
             product_name    String,
             category        String,
-            price           Decimal(10,2),
+            price          Float64,  -- Changed from Decimal
             supplier_id     Int32
         ) ENGINE = MergeTree()
         ORDER BY product_id
@@ -57,7 +57,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS Dim_Region (
             region_id       Int32,
             region_name     String,
-            country         String,
+            country        String,
             sales_manager   String
         ) ENGINE = MergeTree()
         ORDER BY region_id
@@ -67,11 +67,12 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS Dim_Sales_Channel (
             channel_id      Int32,
             channel_name    String,
-            platform        String
+            platform       String
         ) ENGINE = MergeTree()
         ORDER BY channel_id
     ''')
 
+# Modified existing tables with Float instead of Decimal
     ch_client.execute('''
         CREATE TABLE IF NOT EXISTS Dim_Customer (
             customer_id         Int32,
@@ -80,11 +81,11 @@ def create_tables():
             age_group           Nullable(String),
             gender              Nullable(String),
             membership_status   Nullable(String),
-            average_balance     Nullable(Decimal(15,2)),
-            average_income      Nullable(Decimal(15,2)),
+            average_balance     Nullable(Float64),  -- Changed to Float
+            average_income      Nullable(Float64),  -- Changed to Float
             business_risk_class Nullable(String),
             is_pep              Bool,
-            account_balance     Nullable(Decimal(15,2)),
+            account_balance     Nullable(Float64),  -- Changed to Float
             is_cash_intensive   Bool,
             tpr_threshold_exceeded Bool,
             transacts_hr_jurisdictions Bool,
@@ -92,8 +93,8 @@ def create_tables():
             interests           Array(String),
             occupation          Nullable(String),
             lifecycle_stage     Nullable(String),
-            churn_risk_score    Nullable(Decimal(5,2)),
-            predicted_clv       Nullable(Decimal(12,2)),
+            churn_risk_score    Nullable(Float64),  -- Changed to Float
+            predicted_clv       Nullable(Float64),  -- Changed to Float
             consent_marketing   Bool,
             consent_data_share  Bool,
             data_deletion_date  Nullable(Date)
@@ -101,21 +102,44 @@ def create_tables():
         ORDER BY customer_id
     ''')
 
-    # Create fact tables
     ch_client.execute('''
         CREATE TABLE IF NOT EXISTS Fact_Sales (
             sale_id          Int32,
-            date_id          Int32,
-            product_id       Int32,
-            customer_id      Int32,
-            region_id        Int32,
-            channel_id       Int32,
-            units_sold       Int32,
-            revenue          Decimal(12,2),
-            discount_amount  Decimal(10,2)
+            date_id         Int32,
+            product_id      Int32,
+            customer_id     Int32,
+            region_id       Int32,
+            channel_id      Int32,
+            units_sold      Int32,
+            revenue         Float64,  -- Changed from Decimal
+            discount_amount Float64   -- Changed from Decimal
         ) ENGINE = MergeTree()
         ORDER BY sale_id
     ''')
+
+    ch_client.execute('''
+            CREATE TABLE IF NOT EXISTS Dim_Loan (
+                loan_id               Int32,
+                customer_id           Int32,
+                loan_amount           Float64,
+                interest_rate         Float32,
+                term_months           Int16,
+                start_date            Date,
+                end_date              Date,
+                loan_status           String,
+                loan_type             String,
+                risk_rating           String,
+                collateral_value      Float64,
+                application_channel   String,
+                application_date      Date,
+                last_payment_date     Nullable(Date),
+                next_payment_due_date Nullable(Date),
+                outstanding_balance   Float64
+            ) ENGINE = MergeTree()
+            ORDER BY loan_id
+    ''')
+    print("Created Dim_Loan table.")
+
 
 def generate_dimension_data():
     # Generate Dim_Time (3 years of dates)
@@ -202,7 +226,36 @@ def generate_dimension_data():
     ch_client.execute('INSERT INTO Dim_Product VALUES', dim_products)
     ch_client.execute('INSERT INTO Dim_Customer VALUES', dim_customers)
 
-def generate_fact_sales(num_records=500000, batch_size=10000):
+    print("Generating Dim_Loan data...")
+    customer_ids = [row[0] for row in ch_client.execute('SELECT customer_id FROM Dim_Customer')]
+    dim_loans = []
+
+    for loan_id in range(1, 10001):  # 10,000 loans
+        dim_loans.append({
+            'loan_id': loan_id,
+            'customer_id': random.choice(customer_ids),
+            'loan_amount': round(random.uniform(1000, 500000), 2),
+            'interest_rate': round(random.uniform(3.0, 15.0), 1),
+            'term_months': random.randint(12, 360),
+            'start_date': fake.date_between(start_date='-5y', end_date='today'),
+            'end_date': fake.date_between(start_date='today', end_date='+5y'),
+            'loan_status': random.choice(['Active', 'Closed', 'Defaulted', 'Delinquent']),
+            'loan_type': random.choice(['Personal', 'Mortgage', 'Auto', 'Business']),
+            'risk_rating': random.choice(['A', 'B', 'C', 'D']),
+            'collateral_value': round(random.uniform(0, 1000000), 2),
+            'application_channel': random.choice(['Online', 'Branch', 'Mobile', 'Agent']),
+            'application_date': fake.date_between(start_date='-5y', end_date='today'),
+            'last_payment_date': fake.date_this_year() if random.random() < 0.7 else None,
+            'next_payment_due_date': fake.date_between(start_date='today', end_date='+1y') if random.random() < 0.8 else None,
+            'outstanding_balance': round(random.uniform(0, 500000), 2)
+        })
+    print(f"Generated {len(dim_loans)} rows for Dim_Loan.")
+
+    # Insert new data
+    ch_client.execute('INSERT INTO Dim_Loan VALUES', dim_loans)
+    print("Loan data inserted.")
+
+def generate_fact_sales(num_records=100000, batch_size=10000):
     # Get existing keys
     date_ids = [row[0] for row in ch_client.execute('SELECT date_id FROM Dim_Time')]
     product_ids = [row[0] for row in ch_client.execute('SELECT product_id FROM Dim_Product')]
@@ -248,8 +301,11 @@ def generate_fact_sales(num_records=500000, batch_size=10000):
         ch_client.execute('INSERT INTO Fact_Sales VALUES', batch)
         print(f'Inserted {len(batch)} records (Total: {i + len(batch)}/{num_records})')
 
+
+
 if __name__ == '__main__':
+    print("Starting data generation...")
     create_tables()
     generate_dimension_data()
     generate_fact_sales()
-    print("Data generation complete!")
+    print("All data generation complete!")

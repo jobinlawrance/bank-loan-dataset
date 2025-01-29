@@ -1,4 +1,3 @@
-```mermaid
 erDiagram
     Dim_Time {
         Int32 date_id
@@ -11,7 +10,7 @@ erDiagram
         Int32 product_id
         String product_name
         String category
-        Decimal price
+        Float64 price
         Int32 supplier_id
     }
 
@@ -35,20 +34,20 @@ erDiagram
         String age_group
         String gender
         String membership_status
-        Decimal average_balance
-        Decimal average_income
+        Float64 average_balance
+        Float64 average_income
         String business_risk_class
         Bool is_pep
-        Decimal account_balance
+        Float64 account_balance
         Bool is_cash_intensive
         Bool tpr_threshold_exceeded
         Bool transacts_hr_jurisdictions
         String preferred_channel
-        Array interests
+        String[] interests
         String occupation
         String lifecycle_stage
-        Decimal churn_risk_score
-        Decimal predicted_clv
+        Float64 churn_risk_score
+        Float64 predicted_clv
         Bool consent_marketing
         Bool consent_data_share
         Date data_deletion_date
@@ -62,13 +61,33 @@ erDiagram
         Int32 region_id
         Int32 channel_id
         Int32 units_sold
-        Decimal revenue
-        Decimal discount_amount
+        Float64 revenue
+        Float64 discount_amount
     }
 
-    Dim_Time ||--o| Fact_Sales : "date_id"
-    Dim_Product ||--o| Fact_Sales : "product_id"
-    Dim_Customer ||--o| Fact_Sales : "customer_id"
-    Dim_Region ||--o| Fact_Sales : "region_id"
-    Dim_Sales_Channel ||--o| Fact_Sales : "channel_id"
-```
+    Dim_Loan {
+        Int32 loan_id
+        Int32 customer_id
+        Float64 loan_amount
+        Float32 interest_rate
+        Int16 term_months
+        Date start_date
+        Date end_date
+        String loan_status
+        String loan_type
+        String risk_rating
+        Float64 collateral_value
+        String application_channel
+        Date application_date
+        Date last_payment_date
+        Date next_payment_due_date
+        Float64 outstanding_balance
+    }
+
+    Fact_Sales ||--o{ Dim_Time: "date_id"
+    Fact_Sales ||--o{ Dim_Product: "product_id"
+    Fact_Sales ||--o{ Dim_Customer: "customer_id"
+    Fact_Sales ||--o{ Dim_Region: "region_id"
+    Fact_Sales ||--o{ Dim_Sales_Channel: "channel_id"
+    Dim_Customer ||--o{ Dim_Region: "region_id"
+    Dim_Loan ||--o{ Dim_Customer: "customer_id"
