@@ -1,5 +1,13 @@
 ```mermaid
 erDiagram
+    Dim_Time ||--o{ Fact_Sales : "date_id"
+    Dim_Product ||--o{ Fact_Sales : "product_id"
+    Dim_Region ||--o{ Fact_Sales : "region_id"
+    Dim_Sales_Channel ||--o{ Fact_Sales : "channel_id"
+    Dim_Customer ||--o{ Fact_Sales : "customer_id"
+    Dim_Customer ||--o{ Dim_Loan : "customer_id"
+    Dim_Loan ||--o{ Fact_Loan_Repayment : "loan_id"
+
     Dim_Time {
         Int32 date_id
         Date date
@@ -32,26 +40,46 @@ erDiagram
         Int32 customer_id
         String name
         Int32 region_id
-        String age_group
-        String gender
-        String membership_status
-        Float64 average_balance
-        Float64 average_income
-        String business_risk_class
+        Nullable(String) age_group
+        Nullable(String) gender
+        Nullable(String) membership_status
+        Nullable(Float64) average_balance
+        Nullable(Float64) average_income
+        Nullable(String) business_risk_class
         Bool is_pep
-        Float64 account_balance
+        Nullable(Float64) account_balance
         Bool is_cash_intensive
         Bool tpr_threshold_exceeded
         Bool transacts_hr_jurisdictions
-        String preferred_channel
-        String[] interests
-        String occupation
-        String lifecycle_stage
-        Float64 churn_risk_score
-        Float64 predicted_clv
+        Nullable(String) preferred_channel
+        Array(String) interests
+        Nullable(String) occupation
+        Nullable(String) lifecycle_stage
+        Nullable(Float64) churn_risk_score
+        Nullable(Float64) predicted_clv
         Bool consent_marketing
         Bool consent_data_share
-        Date data_deletion_date
+        Nullable(Date) data_deletion_date
+        String risk_profile
+    }
+
+    Dim_Loan {
+        Int32 loan_id
+        Int32 customer_id
+        Float64 loan_amount
+        Float64 interest_rate
+        Int32 term_months
+        Date start_date
+        Date end_date
+        String loan_status
+        String loan_type
+        String risk_rating
+        Float64 collateral_value
+        String application_channel
+        Date application_date
+        Nullable(Date) last_payment_date
+        Nullable(Date) next_payment_due_date
+        Float64 outstanding_balance
     }
 
     Fact_Sales {
@@ -64,32 +92,33 @@ erDiagram
         Int32 units_sold
         Float64 revenue
         Float64 discount_amount
+        Float64 processing_fees
+        Float64 documentation_fees
+        Float64 insurance_fees
+        Float64 customer_acquisition_cost
+        Float64 emi_bounce_charges
+        Float64 npa_loss_amount
+        Float64 total_revenue
+        String status
     }
 
-    Dim_Loan {
+    Fact_Loan_Repayment {
+        Int32 repayment_id
         Int32 loan_id
         Int32 customer_id
-        Float64 loan_amount
-        Float32 interest_rate
-        Int16 term_months
-        Date start_date
-        Date end_date
-        String loan_status
-        String loan_type
-        String risk_rating
-        Float64 collateral_value
-        String application_channel
-        Date application_date
-        Date last_payment_date
-        Date next_payment_due_date
-        Float64 outstanding_balance
+        Int32 emi_number
+        Date due_date
+        Nullable(Date) payment_date
+        Float64 emi_amount
+        Float64 principal_amount
+        Float64 interest_amount
+        Float64 penalties
+        String payment_status
+        String payment_mode
+        Float64 pending_principal
+        Float64 pending_interest
+        Int32 days_overdue
+        Nullable(String) bounce_reason
+        Nullable(Int32) collection_agent_id
     }
-
-    Fact_Sales ||--o{ Dim_Time: "date_id"
-    Fact_Sales ||--o{ Dim_Product: "product_id"
-    Fact_Sales ||--o{ Dim_Customer: "customer_id"
-    Fact_Sales ||--o{ Dim_Region: "region_id"
-    Fact_Sales ||--o{ Dim_Sales_Channel: "channel_id"
-    Dim_Customer ||--o{ Dim_Region: "region_id"
-    Dim_Loan ||--o{ Dim_Customer: "customer_id"
 ```
