@@ -595,67 +595,28 @@ def alter_regions():
     ''')
 
     # List of Southeast Asian countries, their regions, and approximate latitudes/longitudes
-    selected_countries = {
-        "Indonesia": [
-            ("Jakarta", -6.2088, 106.8456), ("Bali", -8.4095, 115.1889), ("Surabaya", -7.2575, 112.7521),
-            ("Medan", 3.5952, 98.6722), ("Bandung", -6.9175, 107.6191), ("Yogyakarta", -7.7956, 110.3695),
-            ("Makassar", -5.1477, 119.4328), ("Palembang", -2.9978, 104.7753), ("Malang", -7.9668, 112.6326),
-            ("Semarang", -6.9669, 110.4177), ("Solo", -7.5661, 110.8230), ("Batam", 1.1218, 104.0377),
-            ("Bogor", -6.5958, 106.7894), ("Denpasar", -8.6586, 115.2167), ("Manado", 1.4747, 124.8450)
-        ],
-        "Thailand": [
-            ("Bangkok", 13.7563, 100.5018), ("Chiang Mai", 18.7870, 98.9936), ("Pattaya", 12.9236, 100.8826),
-            ("Phuket", 7.8804, 98.3923), ("Hat Yai", 6.9920, 100.4749), ("Ayutthaya", 14.3536, 100.5681),
-            ("Chiang Rai", 19.9126, 99.8357), ("Nakhon Ratchasima", 15.0029, 102.1059),
-            ("Khon Kaen", 16.4392, 102.8321), ("Udon Thani", 17.4130, 102.7859), ("Songkhla", 7.1730, 100.5977),
-            ("Surat Thani", 9.0292, 99.3217), ("Nakhon Si Thammarat", 8.4303, 99.9573),
-            ("Chonburi", 13.3670, 100.9890), ("Ratchaburi", 13.5444, 99.8167)
-        ],
-        "Philippines": [
-            ("Manila", 14.5995, 120.9842), ("Cebu", 10.3157, 123.8854), ("Davao", 7.1907, 125.4553),
-            ("Quezon City", 14.6760, 121.0437), ("Makati", 14.5547, 121.0244), ("Taguig", 14.5349, 121.0509),
-            ("Pasig", 14.5803, 121.0600), ("Iloilo", 10.7202, 122.5612), ("Cagayan de Oro", 8.4826, 124.6476),
-            ("Zamboanga", 6.9260, 122.0780), ("Dumaguete", 9.3070, 123.3072), ("Tarlac", 15.4879, 120.5867),
-            ("Bacolod", 10.6652, 122.9569), ("Baguio", 16.4023, 120.5960), ("Legazpi", 13.1575, 123.7396)
-        ],
-        "Vietnam": [
-            ("Hanoi", 21.0285, 105.8542), ("Ho Chi Minh City", 10.8231, 106.6297),
-            ("Da Nang", 16.0471, 108.2068), ("Hue", 16.4637, 107.5909), ("Can Tho", 10.0450, 105.7463),
-            ("Nha Trang", 12.2388, 109.1967), ("Hai Phong", 20.8449, 106.6889), ("Bien Hoa", 10.9500, 106.8300),
-            ("Vinh", 18.6667, 105.6667), ("Quy Nhon", 13.7828, 109.2192), ("Phan Thiet", 10.9313, 108.1057),
-            ("Vinh Long", 10.2539, 105.9739), ("Long Xuyen", 10.3945, 105.4301),
-            ("Rach Gia", 10.0106, 105.0871), ("Sapa", 22.3233, 104.0844)
-        ],
-        "Malaysia": [
-            ("Kuala Lumpur", 3.1390, 101.6869), ("Penang", 5.4142, 100.3288), ("Johor Bahru", 1.4927, 103.7414),
-            ("Kota Kinabalu", 5.9804, 116.0735), ("Malacca", 2.1896, 102.2501), ("Ipoh", 4.5950, 101.0901),
-            ("Shah Alam", 3.0738, 101.5180), ("Kuantan", 3.8187, 103.3243), ("Kota Bharu", 6.1245, 102.2381),
-            ("Klang", 3.0333, 101.4458), ("Seremban", 2.7264, 101.9484), ("Alor Setar", 6.1182, 100.3655),
-            ("Miri", 4.4029, 114.0083), ("Sandakan", 5.8398, 118.1203), ("Bintulu", 3.1594, 113.0386)
-        ]
-    }
+    # List of regions from the image
+    regions_data = [
+        {"region_name": "Bandar Seri Begawan", "country": "Brunei", "latitude": 4.9031, "longitude": 114.9398},
+        {"region_name": "Phnom Penh", "country": "Cambodia", "latitude": 11.5564, "longitude": 104.9282},
+        {"region_name": "Jakarta", "country": "Indonesia", "latitude": -6.2088, "longitude": 106.8456},
+        {"region_name": "Vientiane", "country": "Laos", "latitude": 17.9757, "longitude": 102.6331},
+        {"region_name": "Kuala Lumpur", "country": "Malaysia", "latitude": 3.139, "longitude": 101.6869},
+        {"region_name": "Yangon", "country": "Myanmar", "latitude": 16.8661, "longitude": 96.1951},
+        {"region_name": "Manila", "country": "Philippines", "latitude": 14.5995, "longitude": 120.9842},
+        {"region_name": "Singapore", "country": "Singapore", "latitude": 1.3521, "longitude": 103.8198},
+        {"region_name": "Bangkok", "country": "Thailand", "latitude": 13.7563, "longitude": 100.5018},
+        {"region_name": "Hanoi", "country": "Vietnam", "latitude": 21.0285, "longitude": 105.8542}
+    ]
 
-    # Flatten and shuffle the list of all region-country pairs with coordinates
-    all_regions = [(region, country, lat, lon) for country, regions in selected_countries.items() for region, lat, lon in regions]
-
-    # Get unique regions (no duplicates)
-    unique_regions = list(set(all_regions))
-
-    # Shuffle to randomize region order
-    random.shuffle(unique_regions)
-
-    # Select up to 50 unique regions (or fewer if there aren't enough)
-    selected_regions = unique_regions[:50]
-
-    # Generate data
     dim_regions = []
-    for region_id, (region_name, country, latitude, longitude) in enumerate(selected_regions, start=0):  # Start region_id from 0
+    for region_id, region in enumerate(regions_data, start=1):  # Start region_id from 1
         dim_regions.append({
             'region_id': region_id,
-            'region_name': region_name,
-            'country': country,
-            'latitude': latitude,
-            'longitude': longitude,
+            'region_name': region['region_name'],
+            'country': region['country'],
+            'latitude': float(region['latitude']),  # Explicitly cast to float
+            'longitude': float(region['longitude']),  # Explicitly cast to float
             'sales_manager': fake.name()
         })
 
@@ -723,6 +684,26 @@ def alter_customer():
     ''')
     print("Finished altering columns")
 
+def update_region_ids():
+    # Get the list of valid region IDs from the updated Dim_Region table
+    valid_region_ids = [row[0] for row in ch_client.execute('SELECT region_id FROM Dim_Region')]
+
+    # Update region_id in Dim_Customer
+    ch_client.execute('''
+        ALTER TABLE Dim_Customer UPDATE
+        region_id = arrayElement([%s], (rand() %% %s) + 1)
+        WHERE region_id NOT IN (%s)
+    ''' % (','.join(map(str, valid_region_ids)), len(valid_region_ids), ','.join(map(str, valid_region_ids))))
+
+    # Update region_id in Fact_Sales
+    ch_client.execute('''
+        ALTER TABLE Fact_Sales UPDATE
+        region_id = arrayElement([%s], (rand() %% %s) + 1)
+        WHERE region_id NOT IN (%s)
+    ''' % (','.join(map(str, valid_region_ids)), len(valid_region_ids), ','.join(map(str, valid_region_ids))))
+
+    print("Updated region IDs in Dim_Customer, Fact_Sales")
+
 if __name__ == '__main__':
     print("Starting data generation...")
     # create_tables()
@@ -732,4 +713,5 @@ if __name__ == '__main__':
     # generate_loan_repayments()
     # print("Data generation complete!")
     alter_regions()
+    update_region_ids()
     # alter_customer()
