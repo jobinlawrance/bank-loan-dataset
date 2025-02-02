@@ -4,6 +4,7 @@ from faker import Faker
 from clickhouse_driver import Client
 from dotenv import load_dotenv
 import random
+import uuid
 
 load_dotenv()
 
@@ -575,11 +576,123 @@ def generate_dim_loan():
 
     print(f"Inserted {len(dim_loans)} loan records.")
 
+def alter_regions():
+    # Drop the table before inserting new data
+    ch_client.execute('DROP TABLE IF EXISTS Dim_Region')
+    print("Dropping tables")
+
+    # Recreate the table (modify as per schema)
+    ch_client.execute('''
+        CREATE TABLE Dim_Region (
+            region_id UInt32,
+            region_name String,
+            country String,
+            sales_manager String
+        ) ENGINE = MergeTree()
+        ORDER BY region_id
+    ''')
+
+    # List of Southeast Asian countries and their regions
+    southeast_asia_regions = {
+        "Indonesia": ["Jakarta", "Bali", "Surabaya", "Medan", "Bandung"],
+        "Thailand": ["Bangkok", "Chiang Mai", "Pattaya", "Phuket", "Hat Yai"],
+        "Philippines": ["Manila", "Cebu", "Davao", "Quezon City", "Makati"],
+        "Vietnam": ["Hanoi", "Ho Chi Minh City", "Da Nang", "Hue", "Can Tho"],
+        "Malaysia": ["Kuala Lumpur", "Penang", "Johor Bahru", "Kota Kinabalu", "Malacca"],
+        "Singapore": ["Singapore"],
+        "Myanmar": ["Yangon", "Mandalay", "Naypyidaw", "Bago", "Taunggyi"],
+        "Laos": ["Vientiane", "Luang Prabang", "Pakse", "Savannakhet", "Thakhek"],
+        "Cambodia": ["Phnom Penh", "Siem Reap", "Battambang", "Sihanoukville", "Kampot"],
+        "Brunei": ["Bandar Seri Begawan", "Kuala Belait", "Seria", "Tutong"]
+    }
+
+    # Flatten and shuffle the list of all region-country pairs
+    all_regions = [(region, country) for country, regions in southeast_asia_regions.items() for region in regions]
+    random.shuffle(all_regions)  # Randomize selection
+
+    # Select up to 50 unique regions (or fewer if there aren't enough)
+    selected_regions = all_regions[:50]
+
+    # Generate data
+    dim_regions = []
+    for region_id, (region_name, country) in enumerate(selected_regions, start=1):
+        dim_regions.append({
+            'region_id': region_id,
+            'region_name': region_name,
+            'country': country,
+            'sales_manager': fake.name()
+        })
+
+    # Insert into ClickHouse
+    print("Inserting into CH")
+    ch_client.execute('INSERT INTO Dim_Region VALUES', dim_regions)
+
+# Function to generate random account numbers
+def generate_account_number():
+    return str(uuid.uuid4())[:12]  # Shortened UUID
+
+# Function to generate financial product values
+def random_amount(min_val, max_val):
+    return round(random.uniform(min_val, max_val), 2)
+
+def random_duration(min_years, max_years):
+    return random.randint(min_years, max_years)
+
+def alter_customer():
+    print("Adding additional Columns")
+    ch_client.execute('''
+        ALTER TABLE Dim_Customer
+        ADD COLUMN IF NOT EXISTS has_fixed_deposit Bool DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS fd_account_number Nullable(String),
+        ADD COLUMN IF NOT EXISTS fd_amount Nullable(Float64),
+        ADD COLUMN IF NOT EXISTS fd_duration Nullable(Int32),
+        ADD COLUMN IF NOT EXISTS has_savings_account Bool DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS savings_account_number Nullable(String),
+        ADD COLUMN IF NOT EXISTS savings_balance Nullable(Float64),
+        ADD COLUMN IF NOT EXISTS has_current_account Bool DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS current_account_number Nullable(String),
+        ADD COLUMN IF NOT EXISTS current_balance Nullable(Float64),
+        ADD COLUMN IF NOT EXISTS has_life_insurance Bool DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS life_insurance_policy_number Nullable(String),
+        ADD COLUMN IF NOT EXISTS life_insurance_amount Nullable(Float64),
+        ADD COLUMN IF NOT EXISTS life_insurance_term Nullable(Int32),
+        ADD COLUMN IF NOT EXISTS has_general_insurance Bool DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS general_insurance_policy_number Nullable(String),
+        ADD COLUMN IF NOT EXISTS general_insurance_coverage Nullable(Float64),
+        ADD COLUMN IF NOT EXISTS general_insurance_term Nullable(Int32)
+    ''')
+    print("Assigning values dynamically using ALTER TABLE UPDATE")
+    ch_client.execute('''
+        ALTER TABLE Dim_Customer UPDATE
+            has_fixed_deposit = IF(risk_profile IN ('Low', 'Medium') AND average_balance > 50000 AND age_group IN ('30-40', '40-50', '50+'), 1, has_fixed_deposit),
+            fd_account_number = IF(has_fixed_deposit = 1, toString(generateUUIDv4()), fd_account_number),
+            fd_amount = IF(has_fixed_deposit = 1, CAST((rand() % 200000 + 50000) AS Float64), fd_amount),
+            fd_duration = IF(has_fixed_deposit = 1, rand() % 5 + 1, fd_duration),
+            has_savings_account = IF(risk_profile IN ('Low', 'Medium', 'High') AND average_balance > 10000, 1, has_savings_account),
+            savings_account_number = IF(has_savings_account = 1, toString(generateUUIDv4()), savings_account_number),
+            savings_balance = IF(has_savings_account = 1, CAST((rand() % 50000 + 10000) AS Float64), savings_balance),
+            has_current_account = IF(is_cash_intensive = 1 OR business_risk_class IN ('Medium', 'High'), 1, has_current_account),
+            current_account_number = IF(has_current_account = 1, toString(generateUUIDv4()), current_account_number),
+            current_balance = IF(has_current_account = 1, CAST((rand() % 100000 + 20000) AS Float64), current_balance),
+            has_life_insurance = IF(risk_profile IN ('Low', 'Medium'), 1, has_life_insurance),
+            life_insurance_policy_number = IF(has_life_insurance = 1, toString(generateUUIDv4()), life_insurance_policy_number),
+            life_insurance_amount = IF(has_life_insurance = 1, CAST((rand() % 500000 + 100000) AS Float64), life_insurance_amount),
+            life_insurance_term = IF(has_life_insurance = 1, rand() % 30 + 10, life_insurance_term),
+            has_general_insurance = IF(business_risk_class IN ('Medium Risk', 'High Risk'), 1, has_general_insurance),
+            general_insurance_policy_number = IF(has_general_insurance = 1, toString(generateUUIDv4()), general_insurance_policy_number),
+            general_insurance_coverage = IF(has_general_insurance = 1, CAST((rand() % 100000 + 20000) AS Float64), general_insurance_coverage),
+            general_insurance_term = IF(has_general_insurance = 1, rand() % 10 + 1, general_insurance_term)
+        WHERE 1 = 1
+    ''')
+    print("Finished altering columns")
+
 if __name__ == '__main__':
     print("Starting data generation...")
-    create_tables()
-    generate_dimension_data()
-    generate_fact_sales(num_records=20000)
-    generate_dim_loan()
-    generate_loan_repayments()
-    print("Data generation complete!")
+    # create_tables()
+    # generate_dimension_data()
+    # generate_fact_sales(num_records=20000)
+    # generate_dim_loan()
+    # generate_loan_repayments()
+    # print("Data generation complete!")
+    alter_regions()
+    alter_customer()
