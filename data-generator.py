@@ -592,30 +592,50 @@ def alter_regions():
         ORDER BY region_id
     ''')
 
-    # List of Southeast Asian countries and their regions
-    southeast_asia_regions = {
-        "Indonesia": ["Jakarta", "Bali", "Surabaya", "Medan", "Bandung"],
-        "Thailand": ["Bangkok", "Chiang Mai", "Pattaya", "Phuket", "Hat Yai"],
-        "Philippines": ["Manila", "Cebu", "Davao", "Quezon City", "Makati"],
-        "Vietnam": ["Hanoi", "Ho Chi Minh City", "Da Nang", "Hue", "Can Tho"],
-        "Malaysia": ["Kuala Lumpur", "Penang", "Johor Bahru", "Kota Kinabalu", "Malacca"],
-        "Singapore": ["Singapore"],
-        "Myanmar": ["Yangon", "Mandalay", "Naypyidaw", "Bago", "Taunggyi"],
-        "Laos": ["Vientiane", "Luang Prabang", "Pakse", "Savannakhet", "Thakhek"],
-        "Cambodia": ["Phnom Penh", "Siem Reap", "Battambang", "Sihanoukville", "Kampot"],
-        "Brunei": ["Bandar Seri Begawan", "Kuala Belait", "Seria", "Tutong"]
+    # List of Southeast Asian countries and their expanded regions
+    selected_countries = {
+        "Indonesia": [
+            "Jakarta", "Bali", "Surabaya", "Medan", "Bandung",
+            "Yogyakarta", "Makassar", "Palembang", "Malang", "Semarang",
+            "Solo", "Batam", "Bogor", "Denpasar", "Manado"
+        ],
+        "Thailand": [
+            "Bangkok", "Chiang Mai", "Pattaya", "Phuket", "Hat Yai",
+            "Ayutthaya", "Chiang Rai", "Nakhon Ratchasima", "Khon Kaen", "Udon Thani",
+            "Songkhla", "Surat Thani", "Nakhon Si Thammarat", "Chonburi", "Ratchaburi"
+        ],
+        "Philippines": [
+            "Manila", "Cebu", "Davao", "Quezon City", "Makati",
+            "Taguig", "Pasig", "Iloilo", "Cagayan de Oro", "Zamboanga",
+            "Dumaguete", "Tarlac", "Bacolod", "Baguio", "Legazpi"
+        ],
+        "Vietnam": [
+            "Hanoi", "Ho Chi Minh City", "Da Nang", "Hue", "Can Tho",
+            "Nha Trang", "Hai Phong", "Bien Hoa", "Vinh", "Quy Nhon",
+            "Phan Thiet", "Vinh Long", "Long Xuyen", "Rach Gia", "Sapa"
+        ],
+        "Malaysia": [
+            "Kuala Lumpur", "Penang", "Johor Bahru", "Kota Kinabalu", "Malacca",
+            "Ipoh", "Shah Alam", "Kuantan", "Kota Bharu", "Klang",
+            "Seremban", "Alor Setar", "Miri", "Sandakan", "Bintulu"
+        ]
     }
 
     # Flatten and shuffle the list of all region-country pairs
-    all_regions = [(region, country) for country, regions in southeast_asia_regions.items() for region in regions]
-    random.shuffle(all_regions)  # Randomize selection
+    all_regions = [(region, country) for country, regions in selected_countries.items() for region in regions]
+
+    # Get unique regions (no duplicates)
+    unique_regions = list(set(all_regions))
+
+    # Shuffle to randomize region order
+    random.shuffle(unique_regions)
 
     # Select up to 50 unique regions (or fewer if there aren't enough)
-    selected_regions = all_regions[:50]
+    selected_regions = unique_regions[:51]
 
     # Generate data
     dim_regions = []
-    for region_id, (region_name, country) in enumerate(selected_regions, start=1):
+    for region_id, (region_name, country) in enumerate(selected_regions, start=0):  # Start region_id from 0
         dim_regions.append({
             'region_id': region_id,
             'region_name': region_name,
@@ -626,6 +646,7 @@ def alter_regions():
     # Insert into ClickHouse
     print("Inserting into CH")
     ch_client.execute('INSERT INTO Dim_Region VALUES', dim_regions)
+
 
 # Function to generate random account numbers
 def generate_account_number():
@@ -695,4 +716,4 @@ if __name__ == '__main__':
     # generate_loan_repayments()
     # print("Data generation complete!")
     alter_regions()
-    alter_customer()
+    # alter_customer()
