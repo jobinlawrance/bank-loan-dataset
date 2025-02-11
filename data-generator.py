@@ -581,11 +581,12 @@ def alter_regions():
     ch_client.execute('DROP TABLE IF EXISTS Dim_Region')
     print("Dropping tables")
 
-    # Recreate the table (modify as per schema)
+    # Recreate the table with branch column
     ch_client.execute('''
         CREATE TABLE Dim_Region (
             region_id UInt32,
             region_name String,
+            branch_name String,
             country String,
             latitude Float32,
             longitude Float32,
@@ -594,36 +595,45 @@ def alter_regions():
         ORDER BY region_id
     ''')
 
-    # List of Southeast Asian countries, their regions, and approximate latitudes/longitudes
-    # List of regions from the image
+    # List of regions and branches from the image with their coordinates
     regions_data = [
-        {"region_name": "Bandar Seri Begawan", "country": "Brunei", "latitude": 4.9031, "longitude": 114.9398},
-        {"region_name": "Phnom Penh", "country": "Cambodia", "latitude": 11.5564, "longitude": 104.9282},
-        {"region_name": "Jakarta", "country": "Indonesia", "latitude": -6.2088, "longitude": 106.8456},
-        {"region_name": "Vientiane", "country": "Laos", "latitude": 17.9757, "longitude": 102.6331},
-        {"region_name": "Kuala Lumpur", "country": "Malaysia", "latitude": 3.139, "longitude": 101.6869},
-        {"region_name": "Yangon", "country": "Myanmar", "latitude": 16.8661, "longitude": 96.1951},
-        {"region_name": "Manila", "country": "Philippines", "latitude": 14.5995, "longitude": 120.9842},
-        {"region_name": "Singapore", "country": "Singapore", "latitude": 1.3521, "longitude": 103.8198},
-        {"region_name": "Bangkok", "country": "Thailand", "latitude": 13.7563, "longitude": 100.5018},
-        {"region_name": "Hanoi", "country": "Vietnam", "latitude": 21.0285, "longitude": 105.8542}
+        {"region": "Central", "branch": "Main Branch", "latitude": 1.2789, "longitude": 103.8536},
+        {"region": "North", "branch": "Ang Mo Kio Ave 1 Branch", "latitude": 1.3700, "longitude": 103.8470},
+        {"region": "Central", "branch": "Balestier Branch", "latitude": 1.3275, "longitude": 103.8452},
+        {"region": "Central", "branch": "Balestier SME Centre", "latitude": 1.3276, "longitude": 103.8453},
+        {"region": "East", "branch": "Bedok Branch", "latitude": 1.3236, "longitude": 103.9273},
+        {"region": "East", "branch": "Bedok SME Centre", "latitude": 1.3237, "longitude": 103.9274},
+        {"region": "West", "branch": "Bukit Batok Central Branch", "latitude": 1.3490, "longitude": 103.7494},
+        {"region": "Central", "branch": "Bukit Merah Branch", "latitude": 1.2819, "longitude": 103.8239},
+        {"region": "Central", "branch": "Bukit Merah SME Centre", "latitude": 1.2820, "longitude": 103.8240},
+        {"region": "East", "branch": "City Plaza Branch", "latitude": 1.3142, "longitude": 103.8933},
+        {"region": "East", "branch": "City Plaza SME Centre", "latitude": 1.3143, "longitude": 103.8934},
+        {"region": "Central", "branch": "City Square Mall Branch", "latitude": 1.3115, "longitude": 103.8559},
+        {"region": "Central", "branch": "City Square Mall SME Centre", "latitude": 1.3116, "longitude": 103.8560},
+        {"region": "West", "branch": "Clementi West Branch", "latitude": 1.3150, "longitude": 103.7650},
+        {"region": "West", "branch": "Clementi West SME Centre", "latitude": 1.3151, "longitude": 103.7651},
+        {"region": "Central", "branch": "Ghim Moh Branch", "latitude": 1.3107, "longitude": 103.7890},
+        {"region": "Central", "branch": "Holland Drive Branch", "latitude": 1.3112, "longitude": 103.7914},
+        {"region": "Central", "branch": "Hong Lim Branch", "latitude": 1.2847, "longitude": 103.8470},
+        {"region": "Central", "branch": "Hong Lim SME Centre", "latitude": 1.2848, "longitude": 103.8471}
     ]
 
+    # Insert data with weighted distribution
     dim_regions = []
-    for region_id, region in enumerate(regions_data, start=1):  # Start region_id from 1
+    for region_id, region in enumerate(regions_data, start=1):
         dim_regions.append({
             'region_id': region_id,
-            'region_name': region['region_name'],
-            'country': region['country'],
-            'latitude': float(region['latitude']),  # Explicitly cast to float
-            'longitude': float(region['longitude']),  # Explicitly cast to float
+            'region_name': region['region'],
+            'branch_name': region['branch'],
+            'country': 'Singapore',
+            'latitude': float(region['latitude']),
+            'longitude': float(region['longitude']),
             'sales_manager': fake.name()
         })
 
     # Insert into ClickHouse
     print("Inserting into CH")
     ch_client.execute('INSERT INTO Dim_Region VALUES', dim_regions)
-
 
 # Function to generate random account numbers
 def generate_account_number():
@@ -686,23 +696,65 @@ def alter_customer():
 
 def update_region_ids():
     # Get the list of valid region IDs from the updated Dim_Region table
-    valid_region_ids = [row[0] for row in ch_client.execute('SELECT region_id FROM Dim_Region')]
+    regions = ch_client.execute('SELECT region_id, region_name FROM Dim_Region')
+    valid_region_ids = [row[0] for row in regions]
+    
+    # Create weighted distribution based on regions
+    region_weights = {}
+    for region_id, region_name in regions:
+        if region_name == 'Central':
+            region_weights[region_id] = 0.5  # 50% weight for Central
+        elif region_name == 'East':
+            region_weights[region_id] = 0.25  # 25% weight for East
+        elif region_name == 'West':
+            region_weights[region_id] = 0.15  # 15% weight for West
+        else:  # North
+            region_weights[region_id] = 0.10  # 10% weight for North
 
-    # Update region_id in Dim_Customer
+    # Convert weights to array format for ClickHouse
+    weight_array = []
+    region_id_array = []
+    for region_id, weight in region_weights.items():
+        weight_array.append(str(int(weight * 1000)))  # Convert to integer weight
+        region_id_array.append(str(region_id))
+
+    # Update region_id in Dim_Customer with weighted distribution
     ch_client.execute('''
         ALTER TABLE Dim_Customer UPDATE
-        region_id = arrayElement([%s], (rand() %% %s) + 1)
+        region_id = arrayElement([%s], assumeNotNull(multiIf(
+            rand() %% 1000 < %s, 1,
+            rand() %% 1000 < %s, 2,
+            rand() %% 1000 < %s, 3,
+            4
+        )))
         WHERE region_id NOT IN (%s)
-    ''' % (','.join(map(str, valid_region_ids)), len(valid_region_ids), ','.join(map(str, valid_region_ids))))
+    ''' % (
+        ','.join(region_id_array),
+        weight_array[0],  # Central weight
+        weight_array[1],  # East weight
+        weight_array[2],  # West weight
+        ','.join(map(str, valid_region_ids))
+    ))
 
-    # Update region_id in Fact_Sales
+    # Update region_id in Fact_Sales with the same weighted distribution
     ch_client.execute('''
         ALTER TABLE Fact_Sales UPDATE
-        region_id = arrayElement([%s], (rand() %% %s) + 1)
+        region_id = arrayElement([%s], assumeNotNull(multiIf(
+            rand() %% 1000 < %s, 1,
+            rand() %% 1000 < %s, 2,
+            rand() %% 1000 < %s, 3,
+            4
+        )))
         WHERE region_id NOT IN (%s)
-    ''' % (','.join(map(str, valid_region_ids)), len(valid_region_ids), ','.join(map(str, valid_region_ids))))
+    ''' % (
+        ','.join(region_id_array),
+        weight_array[0],  # Central weight
+        weight_array[1],  # East weight
+        weight_array[2],  # West weight
+        ','.join(map(str, valid_region_ids))
+    ))
 
-    print("Updated region IDs in Dim_Customer, Fact_Sales")
+    print("Updated region IDs in Dim_Customer and Fact_Sales with weighted distribution")
 
 if __name__ == '__main__':
     print("Starting data generation...")
