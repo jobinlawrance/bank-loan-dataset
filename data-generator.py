@@ -695,62 +695,51 @@ def alter_customer():
     print("Finished altering columns")
 
 def update_region_ids():
-    # Get the list of valid region IDs from the updated Dim_Region table
+    # Get all regions and their weights
     regions = ch_client.execute('SELECT region_id, region_name FROM Dim_Region')
-    valid_region_ids = [row[0] for row in regions]
     
-    # Create weighted distribution based on regions
-    region_weights = {}
+    # Group regions by region_name and collect their IDs
+    region_groups = {}
     for region_id, region_name in regions:
-        if region_name == 'Central':
-            region_weights[region_id] = 0.5  # 50% weight for Central
-        elif region_name == 'East':
-            region_weights[region_id] = 0.25  # 25% weight for East
-        elif region_name == 'West':
-            region_weights[region_id] = 0.15  # 15% weight for West
-        else:  # North
-            region_weights[region_id] = 0.10  # 10% weight for North
+        if region_name not in region_groups:
+            region_groups[region_name] = []
+        region_groups[region_name].append(str(region_id))
 
-    # Convert weights to array format for ClickHouse
-    weight_array = []
-    region_id_array = []
-    for region_id, weight in region_weights.items():
-        weight_array.append(str(int(weight * 1000)))  # Convert to integer weight
-        region_id_array.append(str(region_id))
+    # Create weighted distribution based on regions
+    weights = {
+        'Central': 0.5,
+        'East': 0.25,
+        'West': 0.15,
+        'North': 0.10
+    }
 
-    # Update region_id in Dim_Customer with weighted distribution
-    ch_client.execute('''
+    # Build the CASE expression for random distribution
+    case_parts = []
+    cumulative_weight = 0
+    
+    for region_name, weight in weights.items():
+        if region_name in region_groups:
+            region_ids = region_groups[region_name]
+            weight_threshold = int(weight * 1000)
+            cumulative_weight += weight_threshold
+            region_array = f"arrayElement([{','.join(region_ids)}], (rand() % {len(region_ids)}) + 1)"
+            case_parts.append(f"rand() % 1000 < {cumulative_weight}, {region_array}")
+
+    case_expression = f"multiIf({', '.join(case_parts)}, {region_groups['Central'][0]})"  # default to first Central branch
+
+    # Update region_id in Dim_Customer
+    ch_client.execute(f'''
         ALTER TABLE Dim_Customer UPDATE
-        region_id = arrayElement([%s], assumeNotNull(multiIf(
-            rand() %% 1000 < %s, 1,
-            rand() %% 1000 < %s, 2,
-            rand() %% 1000 < %s, 3,
-            4
-        )))
-        WHERE 1=1  -- Update all records
-    ''' % (
-        ','.join(region_id_array),
-        weight_array[0],  # Central weight
-        weight_array[1],  # East weight
-        weight_array[2],  # West weight
-    ))
+        region_id = {case_expression}
+        WHERE 1=1
+    ''')
 
-    # Update region_id in Fact_Sales with the same weighted distribution
-    ch_client.execute('''
+    # Update region_id in Fact_Sales
+    ch_client.execute(f'''
         ALTER TABLE Fact_Sales UPDATE
-        region_id = arrayElement([%s], assumeNotNull(multiIf(
-            rand() %% 1000 < %s, 1,
-            rand() %% 1000 < %s, 2,
-            rand() %% 1000 < %s, 3,
-            4
-        )))
-        WHERE 1=1  -- Update all records
-    ''' % (
-        ','.join(region_id_array),
-        weight_array[0],  # Central weight
-        weight_array[1],  # East weight
-        weight_array[2],  # West weight
-    ))
+        region_id = {case_expression}
+        WHERE 1=1
+    ''')
 
     print("Updated all region IDs in Dim_Customer and Fact_Sales with weighted distribution")
 
