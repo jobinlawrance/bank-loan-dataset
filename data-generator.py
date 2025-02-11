@@ -727,13 +727,12 @@ def update_region_ids():
             rand() %% 1000 < %s, 3,
             4
         )))
-        WHERE region_id NOT IN (%s)
+        WHERE 1=1  -- Update all records
     ''' % (
         ','.join(region_id_array),
         weight_array[0],  # Central weight
         weight_array[1],  # East weight
         weight_array[2],  # West weight
-        ','.join(map(str, valid_region_ids))
     ))
 
     # Update region_id in Fact_Sales with the same weighted distribution
@@ -745,16 +744,15 @@ def update_region_ids():
             rand() %% 1000 < %s, 3,
             4
         )))
-        WHERE region_id NOT IN (%s)
+        WHERE 1=1  -- Update all records
     ''' % (
         ','.join(region_id_array),
         weight_array[0],  # Central weight
         weight_array[1],  # East weight
         weight_array[2],  # West weight
-        ','.join(map(str, valid_region_ids))
     ))
 
-    print("Updated region IDs in Dim_Customer and Fact_Sales with weighted distribution")
+    print("Updated all region IDs in Dim_Customer and Fact_Sales with weighted distribution")
 
 if __name__ == '__main__':
     print("Starting data generation...")
@@ -764,6 +762,6 @@ if __name__ == '__main__':
     # generate_dim_loan()
     # generate_loan_repayments()
     # print("Data generation complete!")
-    alter_regions()
+    # alter_regions()
     update_region_ids()
     # alter_customer()
